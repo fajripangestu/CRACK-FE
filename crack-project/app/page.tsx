@@ -55,6 +55,7 @@ export default function Home() {
         throw new Error(`Server error: ${res.status}`);
       }
       const data = await res.json();
+      console.log("Response data:", data);
       setUsers(data.users); // <-- ambil array dari objek
     } catch (err: any) {
       console.error("Error fetching users:", err);
