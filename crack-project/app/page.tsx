@@ -44,24 +44,30 @@ const steps = [
 
 export default function Home() {
   const [users, setUsers] = useState<any[]>([]);
-const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-useEffect(() => {
-  async function fetchUsers() {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`);
-      const data = await res.json();
-      setUsers(data);
-    } catch (err) {
-      console.error("Error fetching users:", err);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`);
+        if (!res.ok) {
+          throw new Error(`Server error: ${res.status}`);
+        }
+        const data = await res.json();
+        setUsers(data);
+      } catch (err: any) {
+        console.error("Error fetching users:", err);
+        setError("Gagal memuat data pengguna. Silakan coba lagi nanti.");
+      } finally {
+        setLoading(false);
+      }
     }
-  }
-  fetchUsers();
-}, []);
+    fetchUsers();
+  }, []);
 
   return (
+    
     <div className="min-h-screen bg-background text-text">
       <header className="sticky top-0 z-20 border-b border-border/80 bg-background/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
@@ -85,20 +91,6 @@ useEffect(() => {
             <a href="#process" className="transition hover:text-primary">
               Proses
             </a>
-            <section id="integration" className="mx-auto max-w-7xl px-6 py-20 lg:px-8">
-  <h2 className="text-3xl font-semibold text-text mb-6">Test Integrasi Users</h2>
-  {loading ? (
-    <p className="text-slate-600">Loading data...</p>
-  ) : (
-    <ul className="space-y-2">
-      {users.map((user) => (
-        <li key={user.id} className="rounded-lg border border-border bg-surface p-4">
-          <p className="font-semibold">{user.email}</p>
-        </li>
-      ))}
-    </ul>
-  )}
-</section>
 
             <a href="#contact" className="transition hover:text-primary">
               Kontak
@@ -123,6 +115,20 @@ useEffect(() => {
       </header>
 
       <main id="home">
+        <section id="integration" className="mx-auto max-w-7xl px-6 py-20 lg:px-8">
+  <h2 className="text-3xl font-semibold text-text mb-6">Test Integrasi Users</h2>
+  {loading ? (
+    <p className="text-slate-600">Loading data...</p>
+  ) : (
+    <ul className="space-y-2">
+      {users.map((user) => (
+        <li key={user.id} className="rounded-lg border border-border bg-surface p-4">
+          <p className="font-semibold">{user.email}</p>
+        </li>
+      ))}
+    </ul>
+  )}
+</section>
         <section className="px-6 py-20 lg:px-8 lg:py-28">
           <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="space-y-8">
