@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
-import { getProducts } from '../lib/api';
+import { getUsers } from '../lib/api';
 
 export default function Home() {
-  const [products, setProducts] = useState([]);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    getProducts().then(setProducts).catch(console.error);
+    getUsers().then(setUsers).catch(console.error);
   }, []);
 
   return (
     <div>
       <h1>Daftar Produk</h1>
       <ul>
-        {products.map((p: any) => (
+        {users.map((p: any) => (
           <li key={p.id}>
             {p.name} - Rp{p.price.toLocaleString()}
           </li>
