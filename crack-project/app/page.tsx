@@ -44,10 +44,10 @@ const steps = [
 
 export default function Home() {
   const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+useEffect(() => {
   async function fetchUsers() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`);
@@ -55,8 +55,7 @@ export default function Home() {
         throw new Error(`Server error: ${res.status}`);
       }
       const data = await res.json();
-      console.log("Response data:", data);
-      setUsers(data.users); // <-- ambil array dari objek
+      setUsers(data);
     } catch (err: any) {
       console.error("Error fetching users:", err);
       setError("Gagal memuat data pengguna. Silakan coba lagi nanti.");
