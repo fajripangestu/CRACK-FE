@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 const benefits = [
   {
     title: "Kualitas konsisten",
@@ -39,6 +41,24 @@ const steps = [
 ];
 
 export default function Home() {
+  const [users, setUsers] = useState<any[]>([]);
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  async function fetchUsers() {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`);
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+  fetchUsers();
+}, []);
+
   return (
     <div className="min-h-screen bg-background text-text">
       <header className="sticky top-0 z-20 border-b border-border/80 bg-background/90 backdrop-blur">
@@ -63,6 +83,21 @@ export default function Home() {
             <a href="#process" className="transition hover:text-primary">
               Proses
             </a>
+            <section id="integration" className="mx-auto max-w-7xl px-6 py-20 lg:px-8">
+  <h2 className="text-3xl font-semibold text-text mb-6">Test Integrasi Users</h2>
+  {loading ? (
+    <p className="text-slate-600">Loading data...</p>
+  ) : (
+    <ul className="space-y-2">
+      {users.map((user) => (
+        <li key={user.id} className="rounded-lg border border-border bg-surface p-4">
+          <p className="font-semibold">{user.email}</p>
+        </li>
+      ))}
+    </ul>
+  )}
+</section>
+
             <a href="#contact" className="transition hover:text-primary">
               Kontak
             </a>
