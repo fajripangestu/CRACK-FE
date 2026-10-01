@@ -11,7 +11,8 @@ export default function RegisterPage() {
     event.preventDefault();
     setMessage("");
 
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget as HTMLFormElement;
+    const formData = new FormData(form);
     const name = (formData.get("name") as string)?.trim();
     const email = (formData.get("email") as string)?.trim();
     const password = formData.get("password") as string;
@@ -46,7 +47,7 @@ export default function RegisterPage() {
       }
 
       setMessage("✅ Pendaftaran berhasil. Silakan login.");
-      event.currentTarget.reset();
+      form.reset();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Terjadi kesalahan pada server.");
     } finally {
