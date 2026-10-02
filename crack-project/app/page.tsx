@@ -42,8 +42,29 @@ const steps = [
   "Pengiriman lengkap dengan dukungan teknis",
 ];
 
+type IntegrationUser = {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  createdAt: string;
+};
+
+function formatCreatedAt(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
 export default function Home() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<IntegrationUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,12 +72,14 @@ export default function Home() {
     async function fetchUsers() {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`);
+
         if (!res.ok) {
           throw new Error(`Server error: ${res.status}`);
         }
+
         const data = await res.json();
         setUsers(data);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error fetching users:", err);
         setError("Gagal memuat data pengguna. Silakan coba lagi nanti.");
       } finally {
@@ -119,14 +142,31 @@ export default function Home() {
           <h2 className="text-3xl font-semibold text-text mb-6">Test Integrasi Users</h2>
           {loading ? (
             <p className="text-slate-600">Loading data...</p>
+          ) : error ? (
+            <p role="alert" className="text-sm text-red-700">{error}</p>
           ) : (
-            <ul className="space-y-2">
-              {users.map((user) => (
-                <li key={user.id} className="rounded-lg border border-border bg-surface p-4">
-                  <p className="font-semibold">{user.email}</p>
-                </li>
-              ))}
-            </ul>
+            <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead className="border-b border-border bg-background text-slate-600">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 font-medium">Nama</th>
+                    <th scope="col" className="px-4 py-3 font-medium">Email</th>
+                    <th scope="col" className="px-4 py-3 font-medium">Role</th>
+                    <th scope="col" className="px-4 py-3 font-medium">Created At</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {users.map((user) => (
+                    <tr key={user.id}>
+                      <td className="whitespace-nowrap px-4 py-3 font-medium text-text">{user.name}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-600">{user.email}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-600">{user.role}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-500">{formatCreatedAt(user.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
         <section className="px-6 py-20 lg:px-8 lg:py-28">
