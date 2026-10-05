@@ -3,17 +3,34 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import RoleDelegation from "@/app/components/roleDelegation";
 
-export default function DashboardPage() {
+export default function SuperadminDashboardPage() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
+  const [users, setUsers] = useState<{ id: number; email: string; role: string }[]>([]);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem("token");
+    const tokenCookie = document.cookie
+      .split("; ")
+      .find((cookie) => cookie.startsWith("token="));
+    const savedToken = tokenCookie
+      ? decodeURIComponent(tokenCookie.slice("token=".length))
+      : null;
+
     if (!savedToken) {
       router.push("/login"); // redirect kalau belum login
     } else {
       setToken(savedToken);
+    // Fetch daftar user dari backend
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+        headers: {
+          Authorization: `Bearer ${savedToken}`,
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => setUsers(data))
+        .catch((err) => console.error("Gagal fetch users:", err));
     }
   }, [router]);
 
@@ -95,6 +112,17 @@ const superadminMenus = [
       <main className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
         <h1 className="text-3xl font-semibold mb-8">Menu Superadmin</h1>
 
+        <h1 className="text-3xl font-semibold mb-8">Manajemen Akun</h1>
+
+        <div className="space-y-4">
+          {users.map((user) => (
+            <div key={user.id} className="flex gap-4 items-center border p-3 rounded">
+              <span>{user.email}</span>
+              <RoleDelegation user={user} token={token} />
+            </div>
+          ))}
+        </div>
+        
         <div className="grid gap-6 md:grid-cols-2">
           {superadminMenus.map((menu) => (
             <div

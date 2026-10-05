@@ -14,33 +14,26 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    console.log("🔎 Mengirim login request:", { email, password });
-
     try {
-      const res = await fetch("http://localhost:3001/auth/login", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001"}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
-      console.log("📩 Response status:", res.status);
-
       if (!res.ok) {
         const err = await res.json();
-        console.error("❌ Error response:", err);
         setError(err.message || "Login gagal");
         setLoading(false);
         return;
       }
 
       const data = await res.json();
-      console.log("✅ Login berhasil, data:", data);
-
-      localStorage.setItem("token", data.access_token);
+      const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
+      document.cookie = `token=${encodeURIComponent(data.access_token)}; Path=/; Max-Age=86400; SameSite=Lax${secureFlag}`;
       alert("Login berhasil!");
-      window.location.href = "/dashboard"; // redirect setelah login
-    } catch (err) {
-      console.error("🔥 Catch error:", err);
+      window.location.href = "/dashboard/superadmin"; // redirect setelah login
+    } catch {
       setError("Terjadi kesalahan server");
     } finally {
       setLoading(false);
