@@ -118,6 +118,9 @@ const superadminMenus = [
           {users.map((user) => (
             <div key={user.id} className="flex gap-4 items-center border p-3 rounded">
               <span>{user.email}</span>
+              <span className="bg-primary text-white px-2 py-1 rounded-full text-xs">
+                {user.role}
+              </span>
               <RoleDelegation user={user} token={token} />
             </div>
           ))}

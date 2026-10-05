@@ -8,7 +8,7 @@ interface RoleDelegationProps {
 export default function RoleDelegation({ user, token }: RoleDelegationProps) {
   async function changeRole(newRole: string) {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${user.id}/role`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${user.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -31,9 +31,9 @@ export default function RoleDelegation({ user, token }: RoleDelegationProps) {
       onChange={(e) => changeRole(e.target.value)}
       className="border rounded px-2 py-1"
     >
-      <option value="user">User</option>
-      <option value="admin">Admin</option>
-      <option value="superadmin">Superadmin</option>
+      <option value="user">USER</option>
+      <option value="admin">ADMIN</option>
+      <option value="superadmin">SUPER_ADMIN</option>
     </select>
   );
 }
