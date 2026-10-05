@@ -27,13 +27,13 @@ export default function RoleDelegation({ user, token }: RoleDelegationProps) {
 
   return (
     <select
-      defaultValue={user.role}
+      value={user.role}
       onChange={(e) => changeRole(e.target.value)}
       className="border rounded px-2 py-1"
     >
-      <option value="user">USER</option>
-      <option value="admin">ADMIN</option>
-      <option value="superadmin">SUPER_ADMIN</option>
+      <option value="USER">USER</option>
+      <option value="ADMIN">ADMIN</option>
+      <option value="SUPER_ADMIN">SUPER_ADMIN</option>
     </select>
   );
 }
