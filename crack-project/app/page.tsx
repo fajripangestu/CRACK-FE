@@ -349,7 +349,7 @@ export default function Home() {
 
       <footer className="border-t border-border bg-background/90">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-8 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between lg:px-8">
-          <p>© 2026 PT Mitra Mandiri. All rights reserved.</p>
+          <p>© 2026 Manutics. All rights reserved.</p>
           <div className="flex gap-4">
             <a href="#home" className="transition hover:text-primary">
               Beranda

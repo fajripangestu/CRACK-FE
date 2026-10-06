@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import RoleDelegation from "@/app/components/roleDelegation";
+import { useEffect, useState } from "react";
 
 interface User {
   id: number;
@@ -14,194 +12,160 @@ interface User {
   updatedAt: string;
 }
 
-interface UsersTableProps {
-  users: User[];
-  token: string
-}
-
-export default function SuperadminDashboardPage() {
-  const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-
-  useEffect(() => {
-    const tokenCookie = document.cookie
-      .split("; ")
-      .find((cookie) => cookie.startsWith("token="));
-    const savedToken = tokenCookie
-      ? decodeURIComponent(tokenCookie.slice("token=".length))
-      : null;
-
-    if (!savedToken) {
-      router.push("/login"); // redirect kalau belum login
-    } else {
-      setToken(savedToken);
-    // Fetch daftar user dari backend
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
-        headers: {
-          Authorization: `Bearer ${savedToken}`,
-        },
-      })
-        .then((res) => res.json())
-        .then((data) => setUsers(data))
-        .catch((err) => console.error("Gagal fetch users:", err));
-    }
-  }, [router]);
-
-  if (!token) return null;
-
 const superadminMenus = [
-  {
-    title: "Manajemen Sistem",
-    items: [
-      "Pengaturan Aplikasi",
-      "Pengaturan Database",
-      "Role & Permission",
-    ],
+  { 
+    title: "Manajemen Sistem", 
+    description: "Kelola konfigurasi aplikasi, database, serta role & permission.", 
+    items: ["Pengaturan Aplikasi", "Pengaturan Database", "Role & Permission"] 
   },
-  {
-    title: "Manajemen Akun",
-    items: [
-      "Kelola Admin",
-      "Kelola User",
-      "Delegasi Hak Akses",
-    ],
+  { 
+    title: "Manajemen Akun", 
+    description: "Atur admin, user, dan delegasi hak akses.", 
+    items: ["Kelola Admin", "Kelola User", "Delegasi Hak Akses"] 
   },
-  {
-    title: "Monitoring & Audit",
-    items: [
-      "Log Aktivitas",
-      "Statistik Global",
-      "Audit Trail",
-    ],
+  { 
+    title: "Monitoring & Audit", 
+    description: "Pantau aktivitas sistem, statistik global, dan audit trail.", 
+    items: ["Log Aktivitas", "Statistik Global", "Audit Trail"] 
   },
-  {
-    title: "Keamanan",
-    items: [
-      "Manajemen Token/API",
-      "Pengaturan Keamanan",
-      "Alert & Notifikasi",
-    ],
+  { 
+    title: "Keamanan", 
+    description: "Kelola token, pengaturan keamanan, serta alert & notifikasi.", 
+    items: ["Manajemen Token/API", "Pengaturan Keamanan", "Alert & Notifikasi"] 
   },
-  {
-    title: "Operasional",
-    items: [
-      "Manajemen Produk/Konten",
-      "Pengaturan Modul",
-      "Integrasi Eksternal",
-    ],
+  { 
+    title: "Operasional", 
+    description: "Kelola produk, modul, dan integrasi eksternal.", 
+    items: ["Manajemen Produk/Konten", "Pengaturan Modul", "Integrasi Eksternal"] 
   },
 ];
 
+const slugMap: Record<string, string> = {
+  "Pengaturan Aplikasi": "pengaturan-aplikasi",
+  "Pengaturan Database": "pengaturan-database",
+  "Role & Permission": "role-permission",
+  "Kelola Admin": "kelola-admin",
+  "Kelola User": "kelola-user",
+  "Delegasi Hak Akses": "delegasi-hak-akses",
+  "Log Aktivitas": "log-aktivitas",
+  "Statistik Global": "statistik-global",
+  "Audit Trail": "audit-trail",
+  "Manajemen Token/API": "manajemen-token-api",
+  "Pengaturan Keamanan": "pengaturan-keamanan",
+  "Alert & Notifikasi": "alert-notifikasi",
+  "Manajemen Produk/Konten": "manajemen-produk-konten",
+  "Pengaturan Modul": "pengaturan-modul",
+  "Integrasi Eksternal": "integrasi-eksternal",
+};
+
+export default function SuperadminDashboardLanding() {
+  const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+  const tokenCookie = document.cookie.split("; ").find((c) => c.startsWith("token="));
+  const savedToken = tokenCookie ? decodeURIComponent(tokenCookie.slice("token=".length)) : null;
+
+  if (!savedToken) {
+    console.error("Token tidak ditemukan, redirect ke login");
+    return;
+  }
+
+  fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
+        headers: { Authorization: `Bearer ${savedToken}` },
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setUsers(data);
+          } else if (Array.isArray(data.users)) {
+            setUsers(data.users);
+          } else {
+            console.error("Format data tidak sesuai:", data);
+          }
+        })
+        .catch((err) => console.error("Gagal fetch users:", err));
+    }, []);
+
+  // contoh data dummy statistik
+  const stats = [
+    { label: "Log Aktivitas", value: 540 },
+    { label: "Produk Aktif", value: 87 },
+  ];
+
   return (
-    <div className="min-h-screen bg-background text-text">
-      {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-border/80 bg-background/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-lg font-semibold text-white shadow-md">
-              SA
-            </div>
-            <div>
-              <p className="text-lg font-semibold text-text">Superadmin</p>
-              <p className="text-sm text-slate-500">Dashboard Kontrol Global</p>
-            </div>
-          </Link>
+    <div className="min-h-screen bg-background text-text px-6 py-2 lg:px-8">
+      <h1 className="text-3xl font-semibold mb-8">
+        Selamat datang di Dashboard Superadmin. Berikut rangkuman menu utama untuk mengelola sistem secara global.
+      </h1>
 
-          <nav className="hidden gap-6 text-sm font-medium text-slate-600 md:flex">
-            <Link href="/dashboard" className="transition hover:text-primary">
-              Dashboard
-            </Link>
-            <Link href="/settings" className="transition hover:text-primary">
-              Settings
-            </Link>
-            <Link href="/logout" className="transition hover:text-primary">
-              Logout
-            </Link>
-          </nav>
+      {/* Statistik ringkas */}
+      <div className="grid gap-6 mb-12 sm:grid-cols-2 lg:grid-cols-5">
+      {/* Total Super Admin */}
+      <div className="rounded-xl border border-border bg-surface p-6 shadow-sm hover:shadow-md transition">
+        <p className="text-sm text-slate-500">Total Super Admin</p>
+        <p className="text-2xl font-bold text-primary">
+          {users.filter(u => u.role === "SUPER_ADMIN").length}
+        </p>
+      </div>
+
+      {/* Total Admin */}
+      <div className="rounded-xl border border-border bg-surface p-6 shadow-sm hover:shadow-md transition">
+        <p className="text-sm text-slate-500">Total Admin</p>
+        <p className="text-2xl font-bold text-primary">
+          {users.filter(u => u.role === "ADMIN").length}
+        </p>
+      </div>
+
+      {/* Total User */}
+      <div className="rounded-xl border border-border bg-surface p-6 shadow-sm hover:shadow-md transition">
+        <p className="text-sm text-slate-500">Total User</p>
+        <p className="text-2xl font-bold text-primary">
+          {users.filter(u => u.role === "USER").length}
+        </p>
+      </div>
+
+      {/* Statistik dummy */}
+      {stats.map((stat) => (
+        <div
+          key={stat.label}
+          className="rounded-xl border border-border bg-surface p-6 shadow-sm hover:shadow-md transition"
+        >
+          <p className="text-sm text-slate-500">{stat.label}</p>
+          <p className="text-2xl font-bold text-primary">{stat.value}</p>
         </div>
-      </header>
+      ))}
+    </div>
 
-      {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
-
-        <h1 className="text-3xl font-semibold mb-8">Manajemen Akun</h1>
-
-        {/* Tabel User */}
-        <table className="w-full border-collapse shadow-md rounded-lg overflow-hidden mb-12">
-          <thead>
-            <tr className="bg-primary text-white text-left">
-              <th className="px-4 py-3">ID</th>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Role</th>
-              <th className="px-4 py-3">Role Delegation</th>
-              <th className="px-4 py-3">Created At</th>
-              <th className="px-4 py-3">Updated At</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user, idx) => (
-              <tr
-                key={user.id}
-                className={`${
-                  idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                } hover:bg-blue-50 transition`}
-              >
-                <td className="border px-4 py-2">{user.id}</td>
-                <td className="border px-4 py-2 font-medium">{user.name}</td>
-                <td className="border px-4 py-2">{user.email}</td>
-                <td className="border px-4 py-2">
-                  <span className="px-2 py-1 rounded-full text-xs font-semibold 
-                    bg-primary text-white">
-                    {user.role}
-                  </span>
-                </td>
-                <td className="border px-4 py-2">
-                  <RoleDelegation user={user} token={token} />
-                </td>
-                <td className="border px-4 py-2">
-                  {new Date(user.createdAt).toLocaleString()}
-                </td>
-                <td className="border px-4 py-2">
-                  {new Date(user.updatedAt).toLocaleString()}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          {superadminMenus.map((menu) => (
-            <div
-              key={menu.title}
-              className="rounded-2xl border border-border bg-surface p-6 shadow-sm"
-            >
-              <h2 className="text-xl font-semibold text-primary mb-4">
-                {menu.title}
-              </h2>
-              <ul className="space-y-2 text-sm text-slate-600">
-                {menu.items.map((item) => (
-                  <li
-                    key={item}
-                    className="rounded-lg border border-border bg-background px-4 py-2 hover:border-primary hover:text-primary transition"
-                  >
-                    {item}
+      {/* Grid ringkasan menu */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {superadminMenus.map((menu) => (
+          <div
+            key={menu.title}
+            className="rounded-2xl border border-border bg-surface p-6 shadow-sm hover:shadow-md transition"
+          >
+            <h2 className="text-xl font-semibold text-primary mb-2">{menu.title}</h2>
+            <p className="text-sm text-slate-600 mb-4">{menu.description}</p>
+            <ul className="space-y-2 text-sm text-slate-700">
+              {menu.items.map((item) => {
+                const slug = slugMap[item] || item.toLowerCase().replace(/\s+/g, "-");
+                return (
+                  <li key={item}>
+                    <Link
+                      href={`/dashboard/superadmin/${slug}`}
+                      className="block rounded-lg px-3 py-2 hover:bg-primary/10 hover:text-primary transition"
+                    >
+                      {item}
+                    </Link>
                   </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border bg-background/90 mt-12">
-        <div className="mx-auto max-w-7xl px-6 py-8 text-sm text-slate-600 lg:px-8">
-          <p>© 2026 Superadmin Dashboard. All rights reserved.</p>
-        </div>
-      </footer>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
-
