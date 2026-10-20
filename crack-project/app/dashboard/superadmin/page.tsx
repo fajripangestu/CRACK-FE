@@ -1,7 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ChevronRightIcon,
+  ClipboardDocumentListIcon,
+  Cog6ToothIcon,
+  CubeIcon,
+  ExclamationCircleIcon,
+  MagnifyingGlassIcon,
+  ShieldCheckIcon,
+  Squares2X2Icon,
+  UsersIcon,
+  ChartBarIcon,
+} from "@heroicons/react/24/outline";
 
 interface User {
   id: number;
@@ -12,31 +24,38 @@ interface User {
   updatedAt: string;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+
 const superadminMenus = [
-  { 
-    title: "Manajemen Sistem", 
-    description: "Kelola konfigurasi aplikasi, database, serta role & permission.", 
-    items: ["Pengaturan Aplikasi", "Pengaturan Database", "Role & Permission"] 
+  {
+    title: "Manajemen Sistem",
+    description: "Kelola konfigurasi aplikasi, database, serta role & permission.",
+    icon: Cog6ToothIcon,
+    items: ["Pengaturan Aplikasi", "Pengaturan Database", "Role & Permission"],
   },
-  { 
-    title: "Manajemen Akun", 
-    description: "Atur admin, user, dan delegasi hak akses.", 
-    items: ["Kelola Admin", "Kelola User", "Delegasi Hak Akses"] 
+  {
+    title: "Manajemen Akun",
+    description: "Atur admin, user, dan delegasi hak akses.",
+    icon: UsersIcon,
+    items: ["Kelola Admin", "Kelola User", "Delegasi Hak Akses"],
   },
-  { 
-    title: "Monitoring & Audit", 
-    description: "Pantau aktivitas sistem, statistik global, dan audit trail.", 
-    items: ["Log Aktivitas", "Statistik Global", "Audit Trail"] 
+  {
+    title: "Monitoring & Audit",
+    description: "Pantau aktivitas sistem, statistik global, dan audit trail.",
+    icon: ChartBarIcon,
+    items: ["Log Aktivitas", "Statistik Global", "Audit Trail"],
   },
-  { 
-    title: "Keamanan", 
-    description: "Kelola token, pengaturan keamanan, serta alert & notifikasi.", 
-    items: ["Manajemen Token/API", "Pengaturan Keamanan", "Alert & Notifikasi"] 
+  {
+    title: "Keamanan",
+    description: "Kelola token, pengaturan keamanan, serta alert & notifikasi.",
+    icon: ShieldCheckIcon,
+    items: ["Manajemen Token/API", "Pengaturan Keamanan", "Alert & Notifikasi"],
   },
-  { 
-    title: "Operasional", 
-    description: "Kelola produk, modul, dan integrasi eksternal.", 
-    items: ["Manajemen Produk/Konten", "Pengaturan Modul", "Integrasi Eksternal"] 
+  {
+    title: "Operasional",
+    description: "Kelola produk, modul, dan integrasi eksternal.",
+    icon: CubeIcon,
+    items: ["Manajemen Produk/Konten", "Pengaturan Modul", "Integrasi Eksternal"],
   },
 ];
 
@@ -58,114 +77,214 @@ const slugMap: Record<string, string> = {
   "Integrasi Eksternal": "integrasi-eksternal",
 };
 
+const toSlug = (item: string) => slugMap[item] || item.toLowerCase().replace(/\s+/g, "-");
+
+function StatCard({
+  label,
+  value,
+  loading,
+  icon: Icon,
+  hint,
+}: {
+  label: string;
+  value: number;
+  loading: boolean;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  hint?: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-500">{label}</p>
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Icon className="h-5 w-5" />
+        </span>
+      </div>
+      {loading ? (
+        <div className="mt-3 h-8 w-16 animate-pulse rounded-lg bg-slate-100" />
+      ) : (
+        <p className="mt-2 text-3xl font-bold text-primary">{value}</p>
+      )}
+      {hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
+    </div>
+  );
+}
+
 export default function SuperadminDashboardLanding() {
   const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
-  const tokenCookie = document.cookie.split("; ").find((c) => c.startsWith("token="));
-  const savedToken = tokenCookie ? decodeURIComponent(tokenCookie.slice("token=".length)) : null;
+    const tokenCookie = document.cookie.split("; ").find((c) => c.startsWith("token="));
+    const savedToken = tokenCookie ? decodeURIComponent(tokenCookie.slice("token=".length)) : null;
 
-  if (!savedToken) {
-    console.error("Token tidak ditemukan, redirect ke login");
-    return;
-  }
+    if (!savedToken) {
+      setError("Sesi tidak ditemukan. Silakan login ulang.");
+      setLoadingUsers(false);
+      return;
+    }
 
-  fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, {
-        headers: { Authorization: `Bearer ${savedToken}` },
+    const headers = { Authorization: `Bearer ${savedToken}` };
+
+    // Cek akses dashboard superadmin
+    fetch(`${API_URL}/dashboard/superadmin`, { headers, credentials: "include" })
+      .then((res) => {
+        if (!res.ok) throw new Error("Unauthorized");
       })
-        .then((res) => {
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          return res.json();
-        })
-        .then((data) => {
-          if (Array.isArray(data)) {
-            setUsers(data);
-          } else if (Array.isArray(data.users)) {
-            setUsers(data.users);
-          } else {
-            console.error("Format data tidak sesuai:", data);
-          }
-        })
-        .catch((err) => console.error("Gagal fetch users:", err));
-    }, []);
+      .catch(() => setError("Data dashboard gagal dimuat. Coba muat ulang halaman."));
 
-  // contoh data dummy statistik
-  const stats = [
-    { label: "Log Aktivitas", value: 540 },
-    { label: "Produk Aktif", value: 87 },
-  ];
+    // Ambil daftar user untuk statistik
+    fetch(`${API_URL}/users`, { headers })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) setUsers(data);
+        else if (Array.isArray(data.users)) setUsers(data.users);
+        else console.error("Format data tidak sesuai:", data);
+      })
+      .catch((err) => {
+        console.error("Gagal fetch users:", err);
+        setError("Data dashboard gagal dimuat. Coba muat ulang halaman.");
+      })
+      .finally(() => setLoadingUsers(false));
+  }, []);
+
+  const countByRole = (role: string) => users.filter((u) => u.role === role).length;
+
+  // Filter menu berdasarkan pencarian (judul grup atau nama item)
+  const filteredMenus = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return superadminMenus;
+    return superadminMenus
+      .map((menu) => {
+        const groupMatch = menu.title.toLowerCase().includes(q);
+        const items = groupMatch ? menu.items : menu.items.filter((i) => i.toLowerCase().includes(q));
+        return { ...menu, items };
+      })
+      .filter((menu) => menu.items.length > 0);
+  }, [query]);
 
   return (
-    <div className="min-h-screen bg-background text-text px-6 py-2 lg:px-8">
-      <h1 className="text-3xl font-semibold mb-8">
-        Selamat datang di Dashboard Superadmin. Berikut rangkuman menu utama untuk mengelola sistem secara global.
-      </h1>
-
-      {/* Statistik ringkas */}
-      <div className="grid gap-6 mb-12 sm:grid-cols-2 lg:grid-cols-5">
-      {/* Total Super Admin */}
-      <div className="rounded-xl border border-border bg-surface p-6 shadow-sm hover:shadow-md transition">
-        <p className="text-sm text-slate-500">Total Super Admin</p>
-        <p className="text-2xl font-bold text-primary">
-          {users.filter(u => u.role === "SUPER_ADMIN").length}
-        </p>
-      </div>
-
-      {/* Total Admin */}
-      <div className="rounded-xl border border-border bg-surface p-6 shadow-sm hover:shadow-md transition">
-        <p className="text-sm text-slate-500">Total Admin</p>
-        <p className="text-2xl font-bold text-primary">
-          {users.filter(u => u.role === "ADMIN").length}
-        </p>
-      </div>
-
-      {/* Total User */}
-      <div className="rounded-xl border border-border bg-surface p-6 shadow-sm hover:shadow-md transition">
-        <p className="text-sm text-slate-500">Total User</p>
-        <p className="text-2xl font-bold text-primary">
-          {users.filter(u => u.role === "USER").length}
-        </p>
-      </div>
-
-      {/* Statistik dummy */}
-      {stats.map((stat) => (
-        <div
-          key={stat.label}
-          className="rounded-xl border border-border bg-surface p-6 shadow-sm hover:shadow-md transition"
-        >
-          <p className="text-sm text-slate-500">{stat.label}</p>
-          <p className="text-2xl font-bold text-primary">{stat.value}</p>
+    <div className="min-h-screen bg-background px-6 py-6 text-text lg:px-8">
+      {/* Header */}
+      <header className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold">Dashboard Superadmin</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            Ringkasan akun dan menu utama untuk mengelola sistem secara global.
+          </p>
         </div>
-      ))}
-    </div>
 
-      {/* Grid ringkasan menu */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {superadminMenus.map((menu) => (
-          <div
-            key={menu.title}
-            className="rounded-2xl border border-border bg-surface p-6 shadow-sm hover:shadow-md transition"
-          >
-            <h2 className="text-xl font-semibold text-primary mb-2">{menu.title}</h2>
-            <p className="text-sm text-slate-600 mb-4">{menu.description}</p>
-            <ul className="space-y-2 text-sm text-slate-700">
-              {menu.items.map((item) => {
-                const slug = slugMap[item] || item.toLowerCase().replace(/\s+/g, "-");
-                return (
-                  <li key={item}>
-                    <Link
-                      href={`/dashboard/superadmin/${slug}`}
-                      className="block rounded-lg px-3 py-2 hover:bg-primary/10 hover:text-primary transition"
-                    >
-                      {item}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+        <div className="relative w-full lg:w-72">
+          <MagnifyingGlassIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari menu"
+            aria-label="Cari menu"
+            className="w-full rounded-full border border-border bg-surface py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+          />
+        </div>
+      </header>
+
+      {/* Pesan error */}
+      {error && (
+        <div
+          role="alert"
+          className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          <ExclamationCircleIcon className="mt-0.5 h-5 w-5 shrink-0" />
+          <p>{error}</p>
+        </div>
+      )}
+
+      {/* Statistik */}
+      <section aria-label="Statistik ringkas" className="mb-10">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <StatCard
+            label="Total Super Admin"
+            value={countByRole("SUPER_ADMIN")}
+            loading={loadingUsers}
+            icon={ShieldCheckIcon}
+          />
+          <StatCard
+            label="Total Admin"
+            value={countByRole("ADMIN")}
+            loading={loadingUsers}
+            icon={UsersIcon}
+          />
+          <StatCard
+            label="Total User"
+            value={countByRole("USER")}
+            loading={loadingUsers}
+            icon={UsersIcon}
+          />
+          <StatCard
+            label="Log Aktivitas"
+            value={0}
+            loading={false}
+            icon={ClipboardDocumentListIcon}
+            hint="Belum terhubung"
+          />
+          <StatCard
+            label="Produk Aktif"
+            value={0}
+            loading={false}
+            icon={Squares2X2Icon}
+            hint="Belum terhubung"
+          />
+        </div>
+      </section>
+
+      {/* Menu */}
+      <section aria-label="Menu utama">
+        <h2 className="mb-4 text-lg font-semibold">Menu utama</h2>
+
+        {filteredMenus.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center text-sm text-slate-500">
+            Tidak ada menu yang cocok dengan “{query}”.
           </div>
-        ))}
-      </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {filteredMenus.map((menu) => {
+              const Icon = menu.icon;
+              return (
+                <div
+                  key={menu.title}
+                  className="flex flex-col rounded-2xl border border-border bg-surface p-6 shadow-sm"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent text-white">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <h3 className="text-lg font-semibold text-primary">{menu.title}</h3>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-slate-600">{menu.description}</p>
+
+                  <ul className="mt-4 space-y-1 border-t border-border pt-3 text-sm">
+                    {menu.items.map((item) => (
+                      <li key={item}>
+                        <Link
+                          href={`/dashboard/superadmin/${toSlug(item)}`}
+                          className="group flex items-center justify-between rounded-lg px-3 py-2 text-slate-700 transition hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                        >
+                          {item}
+                          <ChevronRightIcon className="h-4 w-4 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-primary" />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

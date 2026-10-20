@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -32,10 +33,30 @@ export default function LoginPage() {
       const data = await res.json();
       const secureFlag = window.location.protocol === "https:" ? "; Secure" : "";
       document.cookie = `token=${encodeURIComponent(data.access_token)}; Path=/; Max-Age=86400; SameSite=Lax${secureFlag}`;
-      alert("Login berhasil!");
-      window.location.href = "/dashboard/superadmin"; // redirect setelah login
+
+      if (data.user.role === "SUPER_ADMIN") {
+        toast.success("Login berhasil!");
+        setTimeout(() => {
+          window.location.href = "/dashboard/superadmin";
+        }, 1000);
+      } else if (data.user.role === "ADMIN") {
+        toast.success("Login berhasil!");
+        setTimeout(() => {
+          window.location.href = "/dashboard/admin";
+        }, 1000);
+      } else if (data.user.role === "USER") {
+        toast.success("Login berhasil!");
+        setTimeout(() => {
+          window.location.href = "/dashboard/user";
+        }, 1000);
+      }else {
+        setError("Role tidak dikenali");
+        toast.error("Role tidak dikenali");
+      }
+
     } catch {
       setError("Terjadi kesalahan server");
+      toast.error("Terjadi kesalahan server");
     } finally {
       setLoading(false);
     }

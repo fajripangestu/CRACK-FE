@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "react-hot-toast";
 
 interface RoleDelegationProps {
   user: { id: number; role: string };
   token: string;
   onRoleChange?: (newRole: string, updatedAt: string) => void;
 }
-
+ 
 export default function RoleDelegation({ user, token, onRoleChange }: RoleDelegationProps) {
   const [loading, setLoading] = useState(false);
   
@@ -24,16 +25,21 @@ export default function RoleDelegation({ user, token, onRoleChange }: RoleDelega
       });
 
       if (!res.ok) throw new Error("Gagal update role");
-      const updatedUser = await res.json(); 
+        // const updatedUser = res.headers.get("content-type")?.includes("application/json")
+        // ? await res.json()
+        // : null;
+        const updatedUser = await res.json(); 
       // pastikan API mengembalikan user terbaru dengan updatedAt
 
       if (onRoleChange) {
         onRoleChange(updatedUser.role, updatedUser.updatedAt);
       }
 
+      toast.success("Role berhasil diupdate!");
+
       } catch (err) {
         console.error(err);
-        alert("Terjadi kesalahan saat update role");
+        toast.error("Terjadi kesalahan saat update role");
       } finally {
       setLoading(false);
       }
