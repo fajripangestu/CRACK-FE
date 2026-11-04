@@ -6,6 +6,7 @@ import {
   MagnifyingGlassIcon,
   PencilIcon,
   PlusIcon,
+  TrashIcon,
   XMarkIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
@@ -14,10 +15,12 @@ import {
 type Role = "USER" | "ADMIN" | "SUPER_ADMIN";
 
 interface User {
-  id: number;
+  id: string;
   name: string;
   email: string;
   role: Role | string;
+  department: string;
+  position: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +30,8 @@ interface FormData {
   email: string;
   password: string;
   role: Role;
+  department: string;
+  position: string;
 }
 
 interface Toast {
@@ -34,13 +39,53 @@ interface Toast {
   message: string;
 }
 
-const EMPTY_FORM: FormData = { name: "", email: "", password: "", role: "USER" };
+const EMPTY_FORM: FormData = {
+  name: "",
+  email: "",
+  password: "",
+  role: "USER",
+  department: "CUSTOMER",
+  position: "CUSTOMER",
+};
 
 const ROLE_STYLES: Record<string, string> = {
   USER: "bg-slate-100 text-slate-700 ring-slate-200",
   ADMIN: "bg-blue-50 text-blue-700 ring-blue-200",
   SUPER_ADMIN: "bg-red-50 text-red-700 ring-violet-200",
 };
+
+const DEPARTMENTS = [
+  "PRODUCTION",
+  "QA",
+  "PPC",
+  "PROCUREMENT",
+  "ENGINEER",
+  "IT",
+  "SALES",
+  "WAREHOUSE",
+  "MAINTENANCE",
+  "HRD",
+  "OWNER",
+  "CUSTOMER",
+  "OTHER",
+];
+
+const POSITIONS = [
+  "OWNER",
+  "GENERAL_MANAGER",
+  "CONSULTANT",
+  "GM_ASSISTANT",
+  "MANAGER",
+  "SUPERVISOR",
+  "TEAM_LEADER",
+  "ENGINEER",
+  "ADMINISTRATIVE_STAFF",
+  "OPERATOR",
+  "TESTER",
+  "CUSTOMER",
+  "INTERNSHIP",
+  "OTHER",
+];
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" });
@@ -76,12 +121,16 @@ export default function KelolaUserPage() {
 
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
+  const [departmentFilter, setDepartmentFilter] = useState("ALL");
+  const [positionFilter, setPositionFilter] = useState("ALL");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const [toast, setToast] = useState<Toast | null>(null);
@@ -127,21 +176,24 @@ export default function KelolaUserPage() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (isModalOpen) setIsModalOpen(false);
+      if (isDeleteConfirmOpen) setIsDeleteConfirmOpen(false);
+      else if (isModalOpen) setIsModalOpen(false);
       else setSelectedUser(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isModalOpen]);
+  }, [isDeleteConfirmOpen, isModalOpen]);
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
     return users.filter((u) => {
       const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
       const matchRole = roleFilter === "ALL" || u.role === roleFilter;
-      return matchSearch && matchRole;
+      const matchDepartment = departmentFilter === "ALL" || u.department === departmentFilter;
+      const matchPosition = positionFilter === "ALL" || u.position === positionFilter;
+      return matchSearch && matchRole && matchDepartment && matchPosition;
     });
-  }, [users, search, roleFilter]);
+  }, [users, search, roleFilter, departmentFilter, positionFilter]);
 
   // ---------- Modal ----------
   const openCreateModal = () => {
@@ -153,7 +205,14 @@ export default function KelolaUserPage() {
 
   const openEditModal = (user: User) => {
     setEditingUser(user);
-    setFormData({ name: user.name, email: user.email, password: "", role: user.role as Role });
+    setFormData({
+      name: user.name,
+      email: user.email,
+      password: "",
+      role: user.role as Role,
+      department: user.department,
+      position: user.position,
+    });
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -168,8 +227,8 @@ export default function KelolaUserPage() {
 
     if (!formData.name.trim()) return setFormError("Nama wajib diisi.");
     if (!/^\S+@\S+\.\S+$/.test(formData.email)) return setFormError("Format email belum benar.");
-    if (!editingUser && formData.password.length < 6)
-      return setFormError("Password minimal 6 karakter.");
+    if (!editingUser && formData.password.length < 8)
+      return setFormError("Password minimal 8 karakter.");
 
     setSaving(true);
     setFormError(null);
@@ -177,7 +236,16 @@ export default function KelolaUserPage() {
     try {
       // Saat edit, password tidak dikirim
       const { password, ...rest } = formData;
-      const payload = editingUser ? rest : formData;
+      const payload = editingUser
+        ? rest
+        : {
+            name: formData.name,
+            email: formData.email,
+            password,
+            role: formData.role,
+            department: formData.department,
+            position: formData.position,
+          };
 
       const res = await fetch(
         editingUser ? `${apiUrl}/users/${editingUser.id}` : `${apiUrl}/users`,
@@ -210,6 +278,34 @@ export default function KelolaUserPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!editingUser || !token || saving) return;
+
+    setSaving(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`${apiUrl}/users/${editingUser.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.message || `Gagal menghapus user (status ${res.status})`);
+      }
+
+      setUsers((prev) => prev.filter((user) => user.id !== editingUser.id));
+      setSelectedUser((prev) => (prev?.id === editingUser.id ? null : prev));
+      setIsDeleteConfirmOpen(false);
+      setIsModalOpen(false);
+      showToast("success", "User berhasil dinonaktifkan.");
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Terjadi kesalahan saat menonaktifkan user.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // ---------- Render ----------
   if (!token) return null;
 
@@ -233,8 +329,8 @@ export default function KelolaUserPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <div className="relative min-w-56 flex-1">
           <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
@@ -254,7 +350,33 @@ export default function KelolaUserPage() {
           <option value="ALL">Semua role</option>
           <option value="USER">USER</option>
           <option value="ADMIN">ADMIN</option>
-          <option value="SUPERADMIN">SUPERADMIN</option>
+          <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+        </select>
+        <select
+          value={departmentFilter}
+          onChange={(e) => setDepartmentFilter(e.target.value)}
+          aria-label="Filter department"
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        >
+          <option value="ALL">Semua department</option>
+          {DEPARTMENTS.map((department) => (
+            <option key={department} value={department}>
+              {department}
+            </option>
+          ))}
+        </select>
+        <select
+          value={positionFilter}
+          onChange={(e) => setPositionFilter(e.target.value)}
+          aria-label="Filter position"
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        >
+          <option value="ALL">Semua position</option>
+          {POSITIONS.map((position) => (
+            <option key={position} value={position}>
+              {position.replaceAll("_", " ")}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -263,19 +385,20 @@ export default function KelolaUserPage() {
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
+              <thead className="border-b border-slate-200 bg-primary text-center text-white">
                 <tr>
                   <th className="px-4 py-3 font-semibold">Nama</th>
                   <th className="hidden px-4 py-3 font-semibold sm:table-cell">Email</th>
                   <th className="px-4 py-3 font-semibold">Role</th>
-                  <th className="px-4 py-3 text-right font-semibold">Aksi</th>
+                  <th className="px-4 py-3 font-semibold">Department</th>
+                  <th className="px-4 py-3 font-semibold">Position</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading &&
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i}>
-                      <td colSpan={4} className="px-4 py-4">
+                      <td colSpan={5} className="px-4 py-4">
                         <div className="h-5 animate-pulse rounded bg-slate-100" />
                       </td>
                     </tr>
@@ -283,7 +406,7 @@ export default function KelolaUserPage() {
 
                 {!loading && loadError && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-12 text-center">
+                    <td colSpan={5} className="px-4 py-12 text-center">
                       <p className="text-slate-600">{loadError}</p>
                       <button
                         onClick={() => {
@@ -300,7 +423,7 @@ export default function KelolaUserPage() {
 
                 {!loading && !loadError && filteredUsers.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-4 py-12 text-center text-slate-500">
+                    <td colSpan={5} className="px-4 py-12 text-center text-slate-500">
                       {users.length === 0
                         ? "Belum ada user. Klik “Tambah user” untuk membuat yang pertama."
                         : "Tidak ada user yang cocok dengan pencarian."}
@@ -343,18 +466,8 @@ export default function KelolaUserPage() {
                         <td className="px-4 py-3">
                           <RoleBadge role={u.role} />
                         </td>
-                        <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditModal(u);
-                            }}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-white hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                          >
-                            <PencilIcon className="h-3.5 w-3.5" />
-                            Edit
-                          </button>
-                        </td>
+                        <td className="px-4 py-3 text-slate-600">{u.department || "—"}</td>
+                        <td className="px-4 py-3 text-slate-600">{u.position || "—"}</td>
                       </tr>
                     );
                   })}
@@ -388,14 +501,22 @@ export default function KelolaUserPage() {
                 </div>
 
                 <dl className="mt-5 space-y-3 text-sm">
-                  <div className="flex justify-between gap-4">
-                    <dt className="text-slate-500">ID</dt>
-                    <dd className="font-medium text-slate-900">{selectedUser.id}</dd>
-                  </div>
                   <div className="flex items-center justify-between gap-4">
                     <dt className="text-slate-500">Role</dt>
                     <dd>
                       <RoleBadge role={selectedUser.role} />
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-slate-500">Department</dt>
+                    <dd className="text-right font-medium text-slate-900">
+                      {selectedUser.department || "—"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-slate-500">Position</dt>
+                    <dd className="text-right font-medium text-slate-900">
+                      {selectedUser.position || "—"}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
@@ -437,7 +558,7 @@ export default function KelolaUserPage() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="user-modal-title"
-            className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
           >
             <div className="mb-5 flex items-center justify-between">
               <h2 id="user-modal-title" className="text-lg font-semibold text-slate-900">
@@ -492,7 +613,7 @@ export default function KelolaUserPage() {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
-                  <p className="mt-1 text-xs text-slate-500">Minimal 6 karakter.</p>
+                  <p className="mt-1 text-xs text-slate-500">Minimal 8 karakter.</p>
                 </div>
               )}
 
@@ -508,7 +629,43 @@ export default function KelolaUserPage() {
                 >
                   <option value="USER">USER</option>
                   <option value="ADMIN">ADMIN</option>
-                  <option value="SUPERADMIN">SUPERADMIN</option>
+                  <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="department" className="mb-1 block text-sm font-medium text-slate-700">
+                  Department
+                </label>
+                <select
+                  id="department"
+                  value={formData.department}
+                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                >
+                  {DEPARTMENTS.map((department) => (
+                    <option key={department} value={department}>
+                      {department}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="position" className="mb-1 block text-sm font-medium text-slate-700">
+                  Position
+                </label>
+                <select
+                  id="position"
+                  value={formData.position}
+                  onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                >
+                  {POSITIONS.map((position) => (
+                    <option key={position} value={position}>
+                      {position.replaceAll("_", " ")}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -519,27 +676,106 @@ export default function KelolaUserPage() {
                 </p>
               )}
 
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  disabled={saving}
-                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-                >
-                  {saving && (
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                  )}
-                  {saving ? "Menyimpan…" : "Simpan"}
-                </button>
+              <div className="flex items-center justify-between gap-2 pt-2">
+                {editingUser && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteError(null);
+                      setIsDeleteConfirmOpen(true);
+                    }}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                    Nonaktifkan user
+                  </button>
+                )}
+                <div className="ml-auto flex gap-2">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    disabled={saving}
+                    className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    {saving && (
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                    )}
+                    {saving ? "Menyimpan…" : "Simpan"}
+                  </button>
+                </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isDeleteConfirmOpen && editingUser && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !saving) setIsDeleteConfirmOpen(false);
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-user-title"
+            aria-describedby="delete-user-description"
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+          >
+            <div className="flex items-start gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600">
+                <ExclamationCircleIcon className="h-6 w-6" />
+              </span>
+              <div>
+                <h2 id="delete-user-title" className="text-lg font-semibold text-slate-900">
+                  Nonaktifkan user?
+                </h2>
+                <p id="delete-user-description" className="mt-2 text-sm leading-6 text-slate-600">
+                  Akun <span className="font-semibold text-slate-900">{editingUser.name}</span>{" "}
+                  akan ditandai tidak aktif dan tidak dapat login. Tindakan ini bisa dibatalkan
+                  oleh administrator.
+                </p>
+              </div>
+            </div>
+
+            {deleteError && (
+              <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                {deleteError}
+              </p>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsDeleteConfirmOpen(false)}
+                disabled={saving}
+                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={saving}
+                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saving ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                ) : (
+                  <TrashIcon className="h-4 w-4" />
+                )}
+                {saving ? "Menonaktifkan…" : "Ya, nonaktifkan"}
+              </button>
+            </div>
           </div>
         </div>
       )}

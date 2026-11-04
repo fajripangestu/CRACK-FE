@@ -10,18 +10,53 @@ import {
   ExclamationCircleIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
+import DepartmentDelegation from "@/app/components/departmentDelegation";
+import PositionDelegation from "@/app/components/positionDelegation";
 
 interface User {
   id: number;
   name: string;
   email: string;
   role: string;
+  department: string;
+  position: string;
   createdAt: string;
   updatedAt: string;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const PAGE_SIZE = 10;
+const DEPARTMENTS = [
+  "PRODUCTION",
+  "QA",
+  "PPC",
+  "PROCUREMENT",
+  "ENGINEER",
+  "IT",
+  "SALES",
+  "WAREHOUSE",
+  "MAINTENANCE",
+  "HRD",
+  "OWNER",
+  "CUSTOMER",
+  "OTHER",
+];
+const POSITIONS = [
+  "OWNER",
+  "GENERAL_MANAGER",
+  "CONSULTANT",
+  "GM_ASSISTANT",
+  "MANAGER",
+  "SUPERVISOR",
+  "TEAM_LEADER",
+  "ENGINEER",
+  "ADMINISTRATIVE_STAFF",
+  "OPERATOR",
+  "TESTER",
+  "CUSTOMER",
+  "INTERNSHIP",
+  "OTHER",
+];
 
 const ROLE_STYLES: Record<string, string> = {
   USER: "bg-slate-100 text-slate-700 ring-slate-200",
@@ -61,6 +96,8 @@ export default function DelegasiHakAksesPage() {
 
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
+  const [departmentFilter, setDepartmentFilter] = useState("ALL");
+  const [positionFilter, setPositionFilter] = useState("ALL");
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -100,10 +137,6 @@ export default function DelegasiHakAksesPage() {
     fetchUsers(savedToken);
   }, [router, fetchUsers]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, roleFilter]);
-
   const showToast = (message: string) => {
     setToast(message);
     setTimeout(() => setToast(null), 3500);
@@ -114,9 +147,11 @@ export default function DelegasiHakAksesPage() {
     return users.filter((u) => {
       const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
       const matchRole = roleFilter === "ALL" || u.role === roleFilter;
-      return matchSearch && matchRole;
+      const matchDepartment = departmentFilter === "ALL" || u.department === departmentFilter;
+      const matchPosition = positionFilter === "ALL" || u.position === positionFilter;
+      return matchSearch && matchRole && matchDepartment && matchPosition;
     });
-  }, [users, search, roleFilter]);
+  }, [users, search, roleFilter, departmentFilter, positionFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -137,13 +172,16 @@ export default function DelegasiHakAksesPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="mb-4 flex flex-col gap-3 md:flex-row">
-        <div className="relative flex-1">
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:flex-wrap">
+        <div className="relative min-w-56 flex-1">
           <MagnifyingGlassIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             placeholder="Cari nama atau email"
             aria-label="Cari user"
             className="w-full rounded-full border border-border bg-surface py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
@@ -151,7 +189,10 @@ export default function DelegasiHakAksesPage() {
         </div>
         <select
           value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
+          onChange={(e) => {
+            setRoleFilter(e.target.value);
+            setPage(1);
+          }}
           aria-label="Filter role"
           className="rounded-full border border-border bg-surface px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
         >
@@ -160,17 +201,51 @@ export default function DelegasiHakAksesPage() {
           <option value="ADMIN">ADMIN</option>
           <option value="SUPER_ADMIN">SUPER_ADMIN</option>
         </select>
+        <select
+          value={departmentFilter}
+          onChange={(e) => {
+            setDepartmentFilter(e.target.value);
+            setPage(1);
+          }}
+          aria-label="Filter department"
+          className="rounded-full border border-border bg-surface px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+        >
+          <option value="ALL">Semua department</option>
+          {DEPARTMENTS.map((department) => (
+            <option key={department} value={department}>
+              {department}
+            </option>
+          ))}
+        </select>
+        <select
+          value={positionFilter}
+          onChange={(e) => {
+            setPositionFilter(e.target.value);
+            setPage(1);
+          }}
+          aria-label="Filter position"
+          className="rounded-full border border-border bg-surface px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+        >
+          <option value="ALL">Semua position</option>
+          {POSITIONS.map((position) => (
+            <option key={position} value={position}>
+              {position.replaceAll("_", " ")}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Tabel */}
       <div className="overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="bg-primary text-white">
+            <thead className="bg-primary text-center text-white">
               <tr>
                 <th className="px-4 py-3 font-semibold">User</th>
                 <th className="px-4 py-3 font-semibold">Role saat ini</th>
                 <th className="px-4 py-3 font-semibold">Ubah role</th>
+                <th className="px-4 py-3 font-semibold">Ubah Departemen</th>
+                <th className="px-4 py-3 font-semibold">Ubah Posisi</th>
                 <th className="px-4 py-3 font-semibold">Dibuat</th>
                 <th className="px-4 py-3 font-semibold">Diperbarui</th>
               </tr>
@@ -179,7 +254,7 @@ export default function DelegasiHakAksesPage() {
               {loading &&
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i}>
-                    <td colSpan={5} className="px-4 py-4">
+                    <td colSpan={7} className="px-4 py-4">
                       <div className="h-5 animate-pulse rounded bg-slate-100" />
                     </td>
                   </tr>
@@ -187,7 +262,7 @@ export default function DelegasiHakAksesPage() {
 
               {!loading && error && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center">
+                  <td colSpan={7} className="px-4 py-12 text-center">
                     <div className="mx-auto flex max-w-sm flex-col items-center gap-3">
                       <ExclamationCircleIcon className="h-8 w-8 text-red-500" />
                       <p className="text-slate-600">{error}</p>
@@ -207,7 +282,7 @@ export default function DelegasiHakAksesPage() {
 
               {!loading && !error && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-slate-500">
+                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
                     {users.length === 0
                       ? "Belum ada user terdaftar."
                       : "Tidak ada user yang cocok dengan pencarian atau filter."}
@@ -244,6 +319,34 @@ export default function DelegasiHakAksesPage() {
                             )
                           );
                           showToast(`Role ${user.name} diubah menjadi ${newRole}.`);
+                        }}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <DepartmentDelegation
+                        user={user}
+                        token={token}
+                        onDepartmentChange={(newDepartment, updatedAt) => {
+                          setUsers((prev) =>
+                            prev.map((u) =>
+                              u.id === user.id ? { ...u, department: newDepartment, updatedAt } : u
+                            )
+                          );
+                          showToast(`Department ${user.name} diubah menjadi ${newDepartment}.`);
+                        }}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <PositionDelegation
+                        user={user}
+                        token={token}
+                        onPositionChange={(newPosition, updatedAt) => {
+                          setUsers((prev) =>
+                            prev.map((u) =>
+                              u.id === user.id ? { ...u, position: newPosition, updatedAt } : u
+                            )
+                          );
+                          showToast(`Position ${user.name} diubah menjadi ${newPosition}.`);
                         }}
                       />
                     </td>

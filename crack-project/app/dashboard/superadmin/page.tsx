@@ -112,6 +112,7 @@ function StatCard({
 
 export default function SuperadminDashboardLanding() {
   const [users, setUsers] = useState<User[]>([]);
+  const [userHistories, setuserHistories] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -151,6 +152,17 @@ export default function SuperadminDashboardLanding() {
         setError("Data dashboard gagal dimuat. Coba muat ulang halaman.");
       })
       .finally(() => setLoadingUsers(false));
+  fetch(`${API_URL}/userHistories`, { headers })
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
+    .then((data) => {
+      setuserHistories(data);
+    })
+    .catch((err) => {
+      console.error("Gagal fetch history:", err);
+    });
   }, []);
 
   const countByRole = (role: string) => users.filter((u) => u.role === role).length;
@@ -226,10 +238,9 @@ export default function SuperadminDashboardLanding() {
           />
           <StatCard
             label="Log Aktivitas"
-            value={0}
+            value={userHistories.length}
             loading={false}
             icon={ClipboardDocumentListIcon}
-            hint="Belum terhubung"
           />
           <StatCard
             label="Produk Aktif"

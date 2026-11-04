@@ -452,7 +452,7 @@ export default function Home() {
 
               <div className="flex flex-wrap gap-3">
                 <a
-                  href="mailto:hello@mitramandiri.com"
+                  href="mailto:hello@manutics.com"
                   className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-primary transition motion-safe:hover:-translate-y-0.5"
                 >
                   <EnvelopeIcon className="h-5 w-5" />

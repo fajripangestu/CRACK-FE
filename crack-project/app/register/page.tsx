@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -124,28 +127,58 @@ export default function RegisterPage() {
                 <label htmlFor="password" className="mb-1 block text-sm font-medium text-text">
                   Password
                 </label>
-                <input
-                  id="password"
-                  name="password"
-                  required
-                  type="password"
-                  placeholder="Buat password"
-                  className="w-full rounded-2xl border border-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary"
-                />
+                <div className="relative">
+                  <input
+                    id="password"
+                    name="password"
+                    required
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Buat password"
+                    className="w-full rounded-2xl border border-border bg-background px-4 py-2.5 pr-12 text-sm outline-none transition focus:border-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                    aria-pressed={showPassword}
+                    className="absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  >
+                    {showPassword ? (
+                      <EyeSlashIcon className="h-5 w-5" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium text-text">
                   Konfirmasi password
                 </label>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  required
-                  type="password"
-                  placeholder="Ulangi password"
-                  className="w-full rounded-2xl border border-border bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary"
-                />
+                <div className="relative">
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    required
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Ulangi password"
+                    className="w-full rounded-2xl border border-border bg-background px-4 py-2.5 pr-12 text-sm outline-none transition focus:border-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((visible) => !visible)}
+                    aria-label={showConfirmPassword ? "Sembunyikan konfirmasi password" : "Tampilkan konfirmasi password"}
+                    aria-pressed={showConfirmPassword}
+                    className="absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeSlashIcon className="h-5 w-5" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <button
