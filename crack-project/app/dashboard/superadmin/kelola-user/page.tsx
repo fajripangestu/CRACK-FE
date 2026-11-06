@@ -310,7 +310,7 @@ export default function KelolaUserPage() {
   if (!token) return null;
 
   return (
-    <div className="mx-auto max-w-6xl p-4 sm:p-6">
+    <div className="w-full py-4 sm:py-6">
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -380,9 +380,9 @@ export default function KelolaUserPage() {
         </select>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* Tabel */}
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-slate-200 bg-primary text-center text-white">

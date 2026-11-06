@@ -42,8 +42,29 @@ export interface CustomerOrder {
   approvals?: CustomerOrderApproval[];
 }
 
+export interface SalesProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  department: string;
+  position: string;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function isSalesProfile(value: unknown): value is SalesProfile {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.name === "string" &&
+    typeof value.email === "string" &&
+    typeof value.role === "string" &&
+    typeof value.department === "string" &&
+    typeof value.position === "string"
+  );
 }
 
 function isCustomerDetail(value: unknown): value is CustomerDetail {
@@ -139,6 +160,57 @@ export function getCustomerOrders(token: string) {
     isCustomerOrder,
     "Gagal memuat daftar customer order.",
   );
+}
+
+export async function getSalesProfile(token: string): Promise<SalesProfile> {
+  const response = await fetch(`${API_URL}/users/me`, {
+    headers: { Authorization: "Bearer " + token },
+    cache: "no-store",
+  });
+  const body: unknown = await response.json().catch(() => null);
+
+  if (!response.ok) throw new Error(errorMessage(body, "Gagal memuat profil."));
+  if (!isSalesProfile(body)) throw new Error("Respons profil tidak valid.");
+  return body;
+}
+
+export async function updateSalesProfile(
+  token: string,
+  profile: Pick<SalesProfile, "name" | "email">,
+): Promise<SalesProfile> {
+  const response = await fetch(`${API_URL}/users/me`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token,
+    },
+    body: JSON.stringify(profile),
+  });
+  const body: unknown = await response.json().catch(() => null);
+
+  if (!response.ok) throw new Error(errorMessage(body, "Gagal menyimpan profil."));
+  if (!isSalesProfile(body)) throw new Error("Respons profil tidak valid.");
+  return body;
+}
+
+export async function changeSalesPassword(
+  token: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const response = await fetch(`${API_URL}/users/me/password`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token,
+    },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  const body: unknown = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(errorMessage(body, "Gagal memperbarui password."));
+  }
 }
 
 export async function createSalesRecord(

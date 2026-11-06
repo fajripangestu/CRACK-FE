@@ -10,6 +10,8 @@ const RULES: Record<string, string[]> = {
   "/dashboard/sales": ["ADMIN"],
   "/dashboard/qa": ["ADMIN"],
   "/dashboard/production": ["ADMIN"],
+  "/dashboard/ppc": ["ADMIN"],
+  "/dashboard/procurement": ["ADMIN"],
   "/dashboard/user": ["USER"],
 };
 
@@ -47,6 +49,12 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
     if (area === "/dashboard/production" && payload.department !== "PRODUCTION") {
+      return NextResponse.redirect(new URL("/unauthorized", req.url));
+    }
+    if (area === "/dashboard/ppc" && payload.department !== "PPC") {
+      return NextResponse.redirect(new URL("/unauthorized", req.url));
+    }
+    if (area === "/dashboard/procurement" && payload.department !== "PROCUREMENT") {
       return NextResponse.redirect(new URL("/unauthorized", req.url));
     }
     return NextResponse.next();

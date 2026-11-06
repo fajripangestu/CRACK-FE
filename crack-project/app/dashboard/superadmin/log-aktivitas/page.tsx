@@ -246,7 +246,7 @@ export default function ActivityLogPage() {
   if (!token) return null;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+    <div className="w-full py-6">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-semibold text-text">Activity Log</h1>

@@ -132,32 +132,78 @@ function ApprovalList({
   approvals: CustomerOrderApproval[];
   detailed?: boolean;
 }) {
+  if (detailed) {
+    return (
+      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+        {APPROVAL_DEPARTMENTS.map((department) => {
+          const departmentApprovals = approvals.filter(
+            (approval) => approval.department === department.value,
+          );
+
+          return (
+            <li
+              key={department.value}
+              className="rounded-lg border border-border bg-white p-3"
+            >
+              <span className="text-xs font-medium text-text">
+                {department.label}
+              </span>
+              {departmentApprovals.length > 0 ? (
+                <ul className="mt-2 space-y-3">
+                  {departmentApprovals.map((approval) => (
+                    <li key={approval.id}>
+                      <span className="mb-1 block text-xs text-slate-500">
+                        {approval.position.replaceAll("_", " ")}
+                      </span>
+                      <ApprovalStatusBadge status={approval.status} />
+                      {approval.decidedBy && (
+                        <span className="mt-1 block text-xs text-slate-500">
+                          {approval.status === "REJECTED"
+                            ? "Ditolak"
+                            : approval.status === "APPROVED"
+                              ? "Disetujui"
+                              : "Diproses"}{" "}
+                          oleh {approval.decidedBy.name}
+                          {approval.decidedAt
+                            ? ` · ${formatDate(approval.decidedAt)}`
+                            : ""}
+                        </span>
+                      )}
+                      {approval.note && (
+                        <span className="mt-1 block whitespace-pre-wrap text-xs text-slate-600">
+                          {approval.note}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <span className="mt-2 block text-xs text-slate-400">
+                  Belum ada persetujuan
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
   if (approvals.length === 0) {
     return <span className="text-xs text-slate-500">Belum ada persetujuan</span>;
   }
 
   return (
-    <ul className={detailed ? "grid gap-2 sm:grid-cols-2 lg:grid-cols-3" : "space-y-1.5"}>
+    <ul className="space-y-1.5">
       {approvals.map((approval) => (
         <li
           key={approval.id}
-          className={detailed ? "rounded-lg border border-border bg-white p-3" : "flex flex-col items-start gap-1"}
+          className="flex flex-col items-start gap-1"
         >
           <span className="text-xs font-medium text-text">
             {approval.department} · {approval.position.replaceAll("_", " ")}
           </span>
           <ApprovalStatusBadge status={approval.status} />
-          {detailed && approval.decidedBy && (
-            <span className="mt-1 text-xs text-slate-500">
-              Oleh {approval.decidedBy.name}
-              {approval.decidedAt ? ` · ${formatDate(approval.decidedAt)}` : ""}
-            </span>
-          )}
-          {detailed && approval.note && (
-            <span className="mt-1 whitespace-pre-wrap text-xs text-slate-600">
-              {approval.note}
-            </span>
-          )}
         </li>
       ))}
     </ul>
@@ -410,7 +456,7 @@ export default function SalesCustomerOrdersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="w-full">
       <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-text sm:text-3xl">Daftar Customer Order</h1>

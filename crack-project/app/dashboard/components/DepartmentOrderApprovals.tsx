@@ -19,7 +19,9 @@ type SpecificationKey =
   | "ts"
   | "el"
   | "minCoilWeight"
-  | "maxCoilWeight";
+  | "maxCoilWeight"
+  | "orderQuantity"
+  | "deliveryTime";
 
 const INITIAL_CHECKED_SPECIFICATIONS: Record<SpecificationKey, boolean> = {
   coating: false,
@@ -33,6 +35,8 @@ const INITIAL_CHECKED_SPECIFICATIONS: Record<SpecificationKey, boolean> = {
   el: false,
   minCoilWeight: false,
   maxCoilWeight: false,
+  orderQuantity: false,
+  deliveryTime: false,
 };
 
 interface QaOrder {
@@ -61,13 +65,14 @@ interface QaOrder {
   EL: number;
   minEL: number;
   maxEL: number;
-  minCoilWeight?: number;
-  maxCoilWeight?: number;
+  minCoilWeight?: number | null;
+  maxCoilWeight?: number | null;
   chemicalTreatment: string;
   totalQuantity: number;
   export: string;
   orderStatus: string;
   orderAt: string;
+  updatedAt: string;
   deliveryTime: string;
   note: string;
   customerDetail: { companyName: string };
@@ -134,11 +139,16 @@ function isQaOrder(value: unknown): value is QaOrder {
     typeof value.export === "string" &&
     typeof value.orderStatus === "string" &&
     typeof value.orderAt === "string" &&
+    typeof value.updatedAt === "string" &&
     typeof value.deliveryTime === "string" &&
     typeof value.note === "string" &&
     typeof value.customerDetail.companyName === "string" &&
-    (value.minCoilWeight === undefined || typeof value.minCoilWeight === "number") &&
-    (value.maxCoilWeight === undefined || typeof value.maxCoilWeight === "number")
+    (value.minCoilWeight === undefined ||
+      value.minCoilWeight === null ||
+      typeof value.minCoilWeight === "number") &&
+    (value.maxCoilWeight === undefined ||
+      value.maxCoilWeight === null ||
+      typeof value.maxCoilWeight === "number")
   );
 }
 
@@ -157,7 +167,7 @@ function getErrorMessage(body: unknown, fallback: string) {
 
 async function fetchDepartmentOrders(
   token: string,
-  department: "QA" | "PRODUCTION",
+  department: "QA" | "PRODUCTION" | "PPC" | "PROCUREMENT",
   departmentLabel: string,
 ): Promise<QaOrder[]> {
   const endpoint = department.toLocaleLowerCase("en-US");
@@ -234,7 +244,7 @@ export default function DepartmentOrderApprovals({
   department,
   departmentLabel,
 }: {
-  department: "QA" | "PRODUCTION";
+  department: "QA" | "PRODUCTION" | "PPC" | "PROCUREMENT";
   departmentLabel: string;
 }) {
   const router = useRouter();
@@ -249,14 +259,27 @@ export default function DepartmentOrderApprovals({
   const [checkedSpecifications, setCheckedSpecifications] =
     useState(INITIAL_CHECKED_SPECIFICATIONS);
   const [saving, setSaving] = useState(false);
+  const isPpcOrProcurement =
+    department === "PPC" || department === "PROCUREMENT";
   const allProductSpecificationsChecked = Object.entries(checkedSpecifications)
-    .filter(([key]) => key !== "minCoilWeight" && key !== "maxCoilWeight")
+    .filter(([key]) =>
+      key !== "minCoilWeight" &&
+      key !== "maxCoilWeight" &&
+      key !== "orderQuantity" &&
+      key !== "deliveryTime" &&
+      !(isPpcOrProcurement && ["ys", "ts", "el"].includes(key)),
+    )
     .every(([, checked]) => checked);
   const allCoilWeightsChecked =
-    department !== "PRODUCTION" ||
+    (department !== "PRODUCTION" && !isPpcOrProcurement) ||
     (checkedSpecifications.minCoilWeight && checkedSpecifications.maxCoilWeight);
+  const allOrderFieldsChecked =
+    !isPpcOrProcurement ||
+    (checkedSpecifications.orderQuantity && checkedSpecifications.deliveryTime);
   const allSpecificationsChecked =
-    allProductSpecificationsChecked && allCoilWeightsChecked;
+    allProductSpecificationsChecked &&
+    allCoilWeightsChecked &&
+    allOrderFieldsChecked;
 
   useEffect(() => {
     const token = getToken();
@@ -359,7 +382,7 @@ export default function DepartmentOrderApprovals({
   }
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col">
+    <div className="flex w-full flex-col">
       <header className="mb-6">
         <h1 className="text-2xl font-semibold text-text sm:text-3xl">
           Persetujuan Customer Order
@@ -498,7 +521,7 @@ export default function DepartmentOrderApprovals({
             role="dialog"
             aria-modal="true"
             aria-labelledby="department-approval-title"
-            className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-border bg-white p-5 shadow-xl sm:p-6"
+            className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-border bg-white p-5 shadow-xl sm:p-6"
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -536,8 +559,24 @@ export default function DepartmentOrderApprovals({
                   <dd className="mt-1 font-medium text-text">{formatDate(selectedOrder.orderAt)}</dd>
                 </div>
                 <div>
+                  <dt className="text-slate-500">Terakhir diperbarui</dt>
+                  <dd className="mt-1 font-medium text-text">{formatDate(selectedOrder.updatedAt)}</dd>
+                </div>
+                <div>
                   <dt className="text-slate-500">Jumlah order</dt>
-                  <dd className="mt-1 font-medium text-text">
+                  <dd className="mt-1 flex items-center gap-2 font-medium text-text">
+                    {isPpcOrProcurement && (
+                      <SpecificationCheckbox
+                        label="jumlah order"
+                        checked={checkedSpecifications.orderQuantity}
+                        onChange={(checked) =>
+                          setCheckedSpecifications((current) => ({
+                            ...current,
+                            orderQuantity: checked,
+                          }))
+                        }
+                      />
+                    )}
                     {selectedOrder.totalQuantity.toLocaleString("id-ID")} kg
                   </dd>
                 </div>
@@ -547,41 +586,63 @@ export default function DepartmentOrderApprovals({
                 </div>
                 <div>
                   <dt className="text-slate-500">Jadwal pengiriman</dt>
-                  <dd className="mt-1 font-medium text-text">{formatDate(selectedOrder.deliveryTime)}</dd>
+                  <dd className="mt-1 flex items-center gap-2 font-medium text-text">
+                    {isPpcOrProcurement && (
+                      <SpecificationCheckbox
+                        label="jadwal pengiriman"
+                        checked={checkedSpecifications.deliveryTime}
+                        onChange={(checked) =>
+                          setCheckedSpecifications((current) => ({
+                            ...current,
+                            deliveryTime: checked,
+                          }))
+                        }
+                      />
+                    )}
+                    {formatDate(selectedOrder.deliveryTime)}
+                  </dd>
                 </div>
-                {department === "PRODUCTION" && selectedOrder.minCoilWeight !== undefined && (
+                {(department === "PRODUCTION" || isPpcOrProcurement) && (
                   <div>
                     <dt className="text-slate-500">Berat minimum coil</dt>
                     <dd className="mt-1 flex items-center gap-2 font-medium text-text">
-                      <SpecificationCheckbox
-                        label="berat minimum coil"
-                        checked={checkedSpecifications.minCoilWeight}
-                        onChange={(checked) =>
-                          setCheckedSpecifications((current) => ({
-                            ...current,
-                            minCoilWeight: checked,
-                          }))
-                        }
-                      />
-                      {formatNumber(selectedOrder.minCoilWeight, "kg")}
+                      {(department === "PRODUCTION" || isPpcOrProcurement) && (
+                        <SpecificationCheckbox
+                          label="berat minimum coil"
+                          checked={checkedSpecifications.minCoilWeight}
+                          onChange={(checked) =>
+                            setCheckedSpecifications((current) => ({
+                              ...current,
+                              minCoilWeight: checked,
+                            }))
+                          }
+                        />
+                      )}
+                      {typeof selectedOrder.minCoilWeight === "number"
+                        ? formatNumber(selectedOrder.minCoilWeight, "kg")
+                        : "—"}
                     </dd>
                   </div>
                 )}
-                {department === "PRODUCTION" && selectedOrder.maxCoilWeight !== undefined && (
+                {(department === "PRODUCTION" || isPpcOrProcurement) && (
                   <div>
                     <dt className="text-slate-500">Berat maksimum coil</dt>
                     <dd className="mt-1 flex items-center gap-2 font-medium text-text">
-                      <SpecificationCheckbox
-                        label="berat maksimum coil"
-                        checked={checkedSpecifications.maxCoilWeight}
-                        onChange={(checked) =>
-                          setCheckedSpecifications((current) => ({
-                            ...current,
-                            maxCoilWeight: checked,
-                          }))
-                        }
-                      />
-                      {formatNumber(selectedOrder.maxCoilWeight, "kg")}
+                      {(department === "PRODUCTION" || isPpcOrProcurement) && (
+                        <SpecificationCheckbox
+                          label="berat maksimum coil"
+                          checked={checkedSpecifications.maxCoilWeight}
+                          onChange={(checked) =>
+                            setCheckedSpecifications((current) => ({
+                              ...current,
+                              maxCoilWeight: checked,
+                            }))
+                          }
+                        />
+                      )}
+                      {typeof selectedOrder.maxCoilWeight === "number"
+                        ? formatNumber(selectedOrder.maxCoilWeight, "kg")
+                        : "—"}
                     </dd>
                   </div>
                 )}
@@ -590,10 +651,15 @@ export default function DepartmentOrderApprovals({
 
             <section className="mt-4 rounded-xl border border-border p-4">
               <h3 className="font-semibold text-text">Spesifikasi Produk</h3>
-              <p className="mt-1 text-sm text-slate-500">
-                {selectedOrder.productName} · {selectedOrder.productType}
-              </p>
               <dl className="mt-3 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <dt className="text-slate-500">Nama produk</dt>
+                  <dd className="mt-1 font-medium text-text">{selectedOrder.productName}</dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500">Tipe produk</dt>
+                  <dd className="mt-1 font-medium text-text">{selectedOrder.productType}</dd>
+                </div>
                 <div>
                   <dt className="text-slate-500">Coating</dt>
                   <div className="mt-1 flex items-center gap-2">
@@ -660,7 +726,9 @@ export default function DepartmentOrderApprovals({
                       }
                     />
                     <dd className="font-medium text-text">
-                      {formatNumber(selectedOrder.TCT, "mm")} ({formatNumber(selectedOrder.minTCT, "")} – {formatNumber(selectedOrder.maxTCT, "mm")})
+                      {isPpcOrProcurement
+                        ? formatNumber(selectedOrder.TCT, "mm")
+                        : `${formatNumber(selectedOrder.TCT, "mm")} (${formatNumber(selectedOrder.minTCT, "")} – ${formatNumber(selectedOrder.maxTCT, "mm")})`}
                     </dd>
                   </div>
                 </div>
@@ -675,7 +743,9 @@ export default function DepartmentOrderApprovals({
                       }
                     />
                     <dd className="font-medium text-text">
-                      {formatNumber(selectedOrder.BMT, "mm")} ({formatNumber(selectedOrder.minBMT, "")} – {formatNumber(selectedOrder.maxBMT, "mm")})
+                      {isPpcOrProcurement
+                        ? formatNumber(selectedOrder.BMT, "mm")
+                        : `${formatNumber(selectedOrder.BMT, "mm")} (${formatNumber(selectedOrder.minBMT, "")} – ${formatNumber(selectedOrder.maxBMT, "mm")})`}
                     </dd>
                   </div>
                 </div>
@@ -690,11 +760,13 @@ export default function DepartmentOrderApprovals({
                       }
                     />
                     <dd className="font-medium text-text">
-                      {formatNumber(selectedOrder.width, "mm")} ({formatNumber(selectedOrder.minWidth, "")} – {formatNumber(selectedOrder.maxWidth, "mm")})
+                      {isPpcOrProcurement
+                        ? formatNumber(selectedOrder.width, "mm")
+                        : `${formatNumber(selectedOrder.width, "mm")} (${formatNumber(selectedOrder.minWidth, "")} – ${formatNumber(selectedOrder.maxWidth, "mm")})`}
                     </dd>
                   </div>
                 </div>
-                <div>
+                {!isPpcOrProcurement && <div>
                   <dt className="text-slate-500">Yield Strength (YS)</dt>
                   <div className="mt-1 flex items-center gap-2">
                     <SpecificationCheckbox
@@ -708,8 +780,8 @@ export default function DepartmentOrderApprovals({
                       {formatNumber(selectedOrder.YS, "MPa")} ({formatNumber(selectedOrder.minYS, "")} – {formatNumber(selectedOrder.maxYS, "MPa")})
                     </dd>
                   </div>
-                </div>
-                <div>
+                </div>}
+                {!isPpcOrProcurement && <div>
                   <dt className="text-slate-500">Tensile Strength (TS)</dt>
                   <div className="mt-1 flex items-center gap-2">
                     <SpecificationCheckbox
@@ -723,8 +795,8 @@ export default function DepartmentOrderApprovals({
                       {formatNumber(selectedOrder.TS, "MPa")} ({formatNumber(selectedOrder.minTS, "")} – {formatNumber(selectedOrder.maxTS, "MPa")})
                     </dd>
                   </div>
-                </div>
-                <div>
+                </div>}
+                {!isPpcOrProcurement && <div>
                   <dt className="text-slate-500">Elongation (EL)</dt>
                   <div className="mt-1 flex items-center gap-2">
                     <SpecificationCheckbox
@@ -738,7 +810,7 @@ export default function DepartmentOrderApprovals({
                       {formatNumber(selectedOrder.EL, "%")} ({formatNumber(selectedOrder.minEL, "")} – {formatNumber(selectedOrder.maxEL, "%")})
                     </dd>
                   </div>
-                </div>
+                </div>}
               </dl>
               <div className="mt-4 border-t border-border pt-3 text-sm">
                 <p className="text-slate-500">Catatan order</p>

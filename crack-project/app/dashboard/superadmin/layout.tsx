@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import CurrentUserGreeting from "../components/CurrentUserGreeting";
 import {
   ArrowRightOnRectangleIcon,
   Bars3Icon,
@@ -124,7 +125,7 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
     <div className="flex min-h-screen flex-col bg-background text-text">
       {/* Navbar */}
       <header className="sticky top-0 z-30 h-16 border-b border-border/80 bg-background/90 backdrop-blur">
-        <div className="mx-auto flex h-full max-w-7xl items-center justify-between gap-4 px-4 lg:px-8">
+        <div className="flex h-full w-full items-center justify-between gap-4 px-4 lg:px-6">
           <div className="flex items-center gap-3">
             {/* Tombol sidebar: drawer di mobile */}
             <button
@@ -160,6 +161,8 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
             </Link>
           </div>
 
+          <div className="flex items-center gap-2">
+            <CurrentUserGreeting />
           <nav className="hidden items-center gap-1 text-sm font-medium text-slate-600 md:flex">
             <Link
               href="/settings"
@@ -168,7 +171,7 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
               Settings
             </Link>
             <Link
-              href="/profile"
+              href={`${DASHBOARD_HREF}/profile`}
               className="rounded-full px-3 py-2 transition hover:bg-surface hover:text-primary"
             >
               My Profile
@@ -181,6 +184,7 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
               Logout
             </button>
           </nav>
+          </div>
         </div>
       </header>
 
@@ -274,7 +278,7 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
                 <Cog6ToothIcon className="h-4 w-4" />
                 Settings
               </Link>
-              <Link href="/profile" className={`${linkBase} text-slate-600 hover:bg-primary/10 hover:text-primary`}>
+              <Link href={`${DASHBOARD_HREF}/profile`} className={`${linkBase} text-slate-600 hover:bg-primary/10 hover:text-primary`}>
                 <UserCircleIcon className="h-4 w-4" />
                 My Profile
               </Link>

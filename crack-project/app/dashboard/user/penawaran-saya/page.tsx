@@ -501,7 +501,7 @@ export default function MyOffersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="w-full">
       <header className="mb-6">
         <h1 className="text-2xl font-semibold text-text sm:text-3xl">Penawaran Saya</h1>
         <p className="mt-1 text-sm text-slate-500">

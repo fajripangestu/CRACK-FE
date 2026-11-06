@@ -14,17 +14,17 @@ const DEMO_ACCOUNTS = [
     password: "super1234admin",
   },
   {
-    label: "Admin",
+    label: "Production Admin",
     role: "ADMIN",
     department: "PRODUCTION",
-    email: "admin1@example.com",
+    email: "productionadmin@example.com",
     password: "admin1234",
   },
   {
-    label: "Sales",
+    label: "Sales Admin",
     role: "ADMIN",
     department: "SALES",
-    email: "admin4@example.com",
+    email: "salesadmin@example.com",
     password: "admin1234",
   },
   {
@@ -42,10 +42,31 @@ const DEMO_ACCOUNTS = [
     password: "productionmanager123",
   },
   {
-    label: "User",
+    label: "PPC Manager",
+    role: "ADMIN",
+    department: "PPC",
+    email: "ppcmanager@example.com",
+    password: "ppcmanager123",
+  },
+  {
+    label: "Procurement Manager",
+    role: "ADMIN",
+    department: "PROCUREMENT",
+    email: "procurementmanager@example.com",
+    password: "procurementmanager123",
+  },
+  {
+    label: "Customer 1",
     role: "USER",
     department: "CUSTOMER",
-    email: "user1@example.com",
+    email: "customer1@example.com",
+    password: "user1234",
+  },
+  {
+    label: "Customer 2",
+    role: "USER",
+    department: "CUSTOMER",
+    email: "customer2@example.com",
     password: "user1234",
   },
 ];
@@ -108,7 +129,11 @@ export default function LoginPage() {
                 ? "/dashboard/qa"
                 : data.user.department === "PRODUCTION"
                   ? "/dashboard/production"
-                  : "/dashboard/admin";
+                    : data.user.department === "PPC"
+                        ? "/dashboard/ppc"
+                        : data.user.department === "PROCUREMENT"
+                          ? "/dashboard/procurement"
+                          : "/dashboard/admin";
         }, 1000);
       } else if (data.user.role === "USER") {
         toast.success("Login berhasil!");
@@ -176,7 +201,7 @@ export default function LoginPage() {
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Akun demo — klik untuk mengisi otomatis
               </p>
-              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {DEMO_ACCOUNTS.map((acc) => {
                   const active = selectedDemo === acc.email;
                   return (
@@ -191,12 +216,6 @@ export default function LoginPage() {
                       }`}
                     >
                       <span className="block font-semibold">{acc.label}</span>
-                      <span className="block truncate text-xs text-slate-500">
-                        {acc.email}
-                      </span>
-                      <span className="block text-xs text-slate-500">
-                        {acc.role} · {acc.department}
-                      </span>
                     </button>
                   );
                 })}

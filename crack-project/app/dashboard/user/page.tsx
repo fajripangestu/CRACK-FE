@@ -8,8 +8,12 @@ import {
   BanknotesIcon,
   ChartBarIcon,
   CheckCircleIcon,
+  ClockIcon,
   ClipboardDocumentListIcon,
   CubeIcon,
+  NoSymbolIcon,
+  ShoppingCartIcon,
+  XCircleIcon,
 } from "@heroicons/react/24/outline";
 
 type OrderStatus = "Menunggu" | "Produksi" | "Dikirim" | "Selesai";
@@ -44,33 +48,9 @@ interface Invoice {
   status: InvoiceStatus;
 }
 
-// TODO: ganti data contoh ini dengan data dari API (fetch ke `${API_URL}/orders` dan `${API_URL}/invoices`).
-const USER = { name: "Budi Santoso", company: "CV Karya Mandiri" };
-
-const INITIAL_ORDERS: Order[] = [
-  { id: "PO-2410-018", date: "18 Okt 2026", product: "Plat Baja Galvanis 2mm", qty: "200 lembar", total: 86_400_000, status: "Produksi", step: 1 },
-  { id: "PO-2410-009", date: "09 Okt 2026", product: 'Pipa Baja Seamless 4"', qty: "150 batang", total: 112_500_000, status: "Dikirim", step: 3 },
-  { id: "PO-2409-031", date: "27 Sep 2026", product: "Baut Hex M12 (kotak)", qty: "500 kotak", total: 37_500_000, status: "Menunggu", step: 0 },
-  { id: "PO-2409-012", date: "12 Sep 2026", product: "Bracket Baja Custom", qty: "1.000 pcs", total: 64_000_000, status: "Selesai", step: 4 },
-  { id: "PO-2408-044", date: "30 Agu 2026", product: "Besi Beton Ulir D16", qty: "300 batang", total: 48_900_000, status: "Selesai", step: 4 },
-];
-
-const INITIAL_INVOICES: Invoice[] = [
-  { id: "INV-5521", orderId: "PO-2409-031", due: "25 Okt 2026", amount: 37_500_000, status: "Menunggu" },
-  { id: "INV-5498", orderId: "PO-2410-009", due: "23 Okt 2026", amount: 112_500_000, status: "Jatuh tempo" },
-  { id: "INV-5467", orderId: "PO-2409-012", due: "12 Okt 2026", amount: 64_000_000, status: "Lunas" },
-  { id: "INV-5410", orderId: "PO-2408-044", due: "14 Sep 2026", amount: 48_900_000, status: "Lunas" },
-];
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:3001";
 const TRACK_STEPS = ["Dipesan", "Produksi", "QC", "Dikirim", "Diterima"];
 const ORDER_FILTERS: (OrderStatus | "Semua")[] = ["Semua", "Menunggu", "Produksi", "Dikirim", "Selesai"];
-const TABS = [
-  { key: "ringkasan", label: "Ringkasan" },
-  { key: "pesanan", label: "Pesanan" },
-  { key: "tagihan", label: "Tagihan" },
-] as const;
-type TabKey = (typeof TABS)[number]["key"];
 
 const rupiah = (n: number) => `Rp ${n.toLocaleString("id-ID")}`;
 
@@ -135,7 +115,13 @@ function StatCard({
           <Icon className="h-5 w-5" />
         </span>
       </div>
-      <p className="mt-2 text-2xl font-bold text-primary">{value}</p>
+      <p
+        className={`mt-2 font-bold text-primary ${
+          typeof value === "number" ? "text-2xl" : "text-sm"
+        }`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
@@ -179,10 +165,9 @@ const btnGhost =
   "inline-flex items-center justify-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-primary/10 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 export default function CustomerDashboardPage() {
-  const [tab, setTab] = useState<TabKey>("ringkasan");
   const [filter, setFilter] = useState<OrderStatus | "Semua">("Semua");
-  const [orders] = useState<Order[]>(INITIAL_ORDERS);
-  const [invoices, setInvoices] = useState<Invoice[]>(INITIAL_INVOICES);
+  const [orders] = useState<Order[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [toast, setToast] = useState("");
   const [offerTracking, setOfferTracking] = useState<OfferTracking[]>([]);
   const [offerTrackingLoading, setOfferTrackingLoading] = useState(true);
@@ -248,6 +233,31 @@ export default function CustomerDashboardPage() {
     return { active, unpaid, spent, done: orders.length - active };
   }, [orders, invoices]);
 
+  const offerStats = useMemo(() => {
+    const statuses = offerTracking.map((offer) =>
+      offer.orderStatus.trim().toLocaleLowerCase("id-ID"),
+    );
+    const countStatuses = (values: string[]) =>
+      statuses.filter((status) => values.includes(status)).length;
+
+    return {
+      total: offerTracking.length,
+      pending: countStatuses(["pending", "pengajuan penawaran"]),
+      accepted: countStatuses(["diterima", "jawaban penawaran", "accepted", "approved"]),
+      rejected: countStatuses(["ditolak", "rejected"]),
+      cancelled: countStatuses(["dibatalkan", "cancelled", "canceled"]),
+      continued: countStatuses([
+        "pemesanan",
+        "produksi",
+        "inspeksi",
+        "quality checking",
+        "packing",
+        "dikirim",
+        "selesai",
+      ]),
+    };
+  }, [offerTracking]);
+
   const activeOrders = orders.filter((o) => o.status === "Produksi" || o.status === "Dikirim");
   const visibleOrders = orders.filter((o) => filter === "Semua" || o.status === filter);
 
@@ -258,40 +268,81 @@ export default function CustomerDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-6 py-6 text-text lg:px-8">
+    <div className="w-full text-text">
       {/* Header */}
       <header className="mb-6">
         <h1 className="text-3xl font-semibold">Dashboard Pelanggan</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-          Selamat datang, {USER.name} ({USER.company}). Pantau pesanan dan tagihan Anda di Manutics.
+          Pantau pesanan dan tagihan Anda di Manutics.
         </p>
       </header>
 
-      {/* Tab */}
-      <div role="tablist" aria-label="Bagian dashboard" className="mb-8 flex gap-1 overflow-x-auto border-b border-border">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            role="tab"
-            aria-selected={tab === t.key}
-            onClick={() => setTab(t.key)}
-            className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-              tab === t.key ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-primary"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <div className="space-y-8">
+        <section aria-label="Ringkasan penawaran">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Ringkasan Penawaran</h2>
+          </div>
+          {offerTrackingError && (
+            <p role="alert" className="mb-4 text-sm text-red-600">
+              {offerTrackingError}
+            </p>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-6">
+            <StatCard
+              label="Total penawaran"
+              value={offerTrackingLoading ? "..." : offerTrackingError ? "—" : offerStats.total}
+              icon={ClipboardDocumentListIcon}
+            />
+            <StatCard
+              label="Pending"
+              value={offerTrackingLoading ? "..." : offerTrackingError ? "—" : offerStats.pending}
+              icon={ClockIcon}
+            />
+            <StatCard
+              label="Diterima"
+              value={offerTrackingLoading ? "..." : offerTrackingError ? "—" : offerStats.accepted}
+              icon={CheckCircleIcon}
+            />
+            <StatCard
+              label="Ditolak"
+              value={offerTrackingLoading ? "..." : offerTrackingError ? "—" : offerStats.rejected}
+              icon={XCircleIcon}
+            />
+            <StatCard
+              label="Dibatalkan"
+              value={offerTrackingLoading ? "..." : offerTrackingError ? "—" : offerStats.cancelled}
+              icon={NoSymbolIcon}
+            />
+            <StatCard
+              label="Lanjut ke pesanan"
+              value={offerTrackingLoading ? "..." : offerTrackingError ? "—" : offerStats.continued}
+              icon={ShoppingCartIcon}
+            />
+          </div>
+        </section>
 
-      {/* Ringkasan */}
-      {tab === "ringkasan" && (
         <section aria-label="Ringkasan">
           <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatCard label="Pesanan aktif" value={stats.active} icon={CubeIcon} />
-            <StatCard label="Tagihan belum dibayar" value={rupiah(stats.unpaid)} icon={ClipboardDocumentListIcon} />
-            <StatCard label="Total pembelian 2026" value={rupiah(stats.spent)} icon={ChartBarIcon} />
-            <StatCard label="Pesanan selesai" value={stats.done} icon={CheckCircleIcon} />
+            <StatCard
+              label="Pesanan aktif"
+              value={orders.length ? stats.active : "Belum ada data"}
+              icon={CubeIcon}
+            />
+            <StatCard
+              label="Tagihan belum dibayar"
+              value={invoices.length ? rupiah(stats.unpaid) : "Belum ada data"}
+              icon={ClipboardDocumentListIcon}
+            />
+            <StatCard
+              label="Total pembelian 2026"
+              value={orders.length ? rupiah(stats.spent) : "Belum ada data"}
+              icon={ChartBarIcon}
+            />
+            <StatCard
+              label="Pesanan selesai"
+              value={orders.length ? stats.done : "Belum ada data"}
+              icon={CheckCircleIcon}
+            />
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
@@ -360,10 +411,89 @@ export default function CustomerDashboardPage() {
             </div>
           </div>
         </section>
-      )}
+
+      {/* Penawaran */}
+        <section aria-label="Penawaran">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="mb-1 text-lg font-semibold">Penawaran</h2>
+              <p className="text-sm text-slate-600">
+                Daftar permintaan penawaran dan status terkininya.
+              </p>
+            </div>
+            <Link href="/dashboard/user/penawaran-saya" className={btnGhost}>
+              Lihat semua penawaran
+            </Link>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-border bg-surface shadow-sm">
+            <table className="w-full min-w-[800px] text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-slate-500">
+                  {[
+                    "Nomor penawaran",
+                    "Produk",
+                    "Jumlah",
+                    "Tanggal pengajuan",
+                    "Jadwal pengiriman",
+                    "Status",
+                  ].map((heading) => (
+                    <th key={heading} className={th}>
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {offerTrackingLoading ? (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-10 text-center text-slate-500">
+                      Memuat penawaran...
+                    </td>
+                  </tr>
+                ) : offerTrackingError ? (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-10 text-center text-red-600">
+                      {offerTrackingError}
+                    </td>
+                  </tr>
+                ) : offerTracking.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-10 text-center text-slate-500">
+                      Belum ada penawaran.{" "}
+                      <Link
+                        href="/dashboard/user/rfq"
+                        className="font-semibold text-primary hover:underline"
+                      >
+                        Buat permintaan penawaran
+                      </Link>
+                    </td>
+                  </tr>
+                ) : (
+                  offerTracking.map((offer) => (
+                    <tr key={offer.id} className="border-b border-border last:border-0">
+                      <td className={`${td} font-medium text-text`}>{offer.SO}</td>
+                      <td className="px-3 py-3 text-slate-600">
+                        <p>{offer.productName}</p>
+                        <p className="text-xs">
+                          {offer.productType} · {offer.totalQuantity.toLocaleString("id-ID")} kg
+                        </p>
+                      </td>
+                      <td className={td}>{offer.totalQuantity.toLocaleString("id-ID")} kg</td>
+                      <td className={td}>{formatTrackingDate(offer.orderAt)}</td>
+                      <td className={td}>{formatTrackingDate(offer.deliveryTime)}</td>
+                      <td className={td}>
+                        <Badge status={offer.orderStatus} />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
       {/* Pesanan */}
-      {tab === "pesanan" && (
         <section aria-label="Pesanan">
           <h2 className="mb-1 text-lg font-semibold">Pesanan</h2>
           <p className="mb-4 text-sm text-slate-600">Riwayat dan status seluruh pesanan Anda.</p>
@@ -400,7 +530,9 @@ export default function CustomerDashboardPage() {
                 {visibleOrders.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-3 py-10 text-center text-slate-500">
-                      Tidak ada pesanan dengan status “{filter}”.
+                      {orders.length === 0
+                        ? "Belum ada data pesanan."
+                        : `Tidak ada pesanan dengan status “${filter}”.`}
                     </td>
                   </tr>
                 ) : (
@@ -430,10 +562,8 @@ export default function CustomerDashboardPage() {
             </table>
           </div>
         </section>
-      )}
 
       {/* Tagihan */}
-      {tab === "tagihan" && (
         <section aria-label="Tagihan">
           <h2 className="mb-1 text-lg font-semibold">Tagihan</h2>
           <p className="mb-4 text-sm text-slate-600">Faktur yang perlu dan sudah dibayar.</p>
@@ -450,7 +580,14 @@ export default function CustomerDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((i) => (
+                {invoices.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-3 py-10 text-center text-slate-500">
+                      Belum ada data tagihan.
+                    </td>
+                  </tr>
+                ) : (
+                  invoices.map((i) => (
                   <tr key={i.id} className="border-b border-border last:border-0">
                     <td className={`${td} font-semibold`}>{i.id}</td>
                     <td className={td}>{i.orderId}</td>
@@ -473,12 +610,13 @@ export default function CustomerDashboardPage() {
                       )}
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </section>
-      )}
+      </div>
 
       {/* Notifikasi */}
       {toast && (
